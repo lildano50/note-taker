@@ -14,21 +14,21 @@ app.get('/api/notes', (req, res) =>
 );
 
 app.post('/api/notes', (req, res) => {
-    console.info(`${req.method} request received to submit feedback`);
+    console.info(`${req.method} request received to submit notes`);
     const { title, text } = req.body;
     if (title && text) {
     const newNote = {
         title,
         text
     };
-    readAndAppend(newNote, './db/feedback.json');
+    readAndAppend(newNote, './db/db.json');
     const response = {
         status: 'success',
         body: newNote,
     };
     res.json(response);
     } else {
-    res.json('Error in posting feedback');
+    res.json('Error in posting notes');
     }
 });
 
