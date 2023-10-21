@@ -2,13 +2,15 @@ const express = require('express');
 const path = require('path');
 const PORT = process.env.PORT || 3001;
 const app = express();
-const { readFromFile, readAndAppend } = require('./helpers/fsUtils');
 const uuid = require('./helpers/uuid');
+const notes = require('./db/db.json');
+const fs = require('fs').promises;
+
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
 app.use(express.static('public'));
 
-// app.use('/notes', notesRouter);
-// const notesRouter = require('/notes')
 
 app.get('/', (req, res) =>
   res.sendFile(path.join(__dirname, '/public/index.html'))
@@ -19,28 +21,52 @@ app.get('/notes', (req, res) =>
 );
 
 app.get('/api/notes', (req, res) => {
-    res.sendFile(path.join(__dirname, './db/db.json'))
-    readFromFile('./db/db.json').then((data) => res.json(JSON.parse(data))) 
+    res.json(notes);
 });
+
 
 app.post('/api/notes', (req, res) => {
     console.info(`${req.method} request received to submit notes`);
-    const { title, text } = req.body;    
+    const { title, text } = req.body;   
     if (title && text) {
       const newNote = {
         title,
         text,
         feedback_id: uuid(),
       };
-    readAndAppend(newNote, './db/db.json');
-      const response = {
-        status: 'success',
-        body: newNote,
-      };
-      res.json(response);
-    } else {
-      res.json('Error in posting note');
-    }
+
+      fs.readFile("./db/db.json", "utf-8")
+      .then( notes => {
+        const parsedNotes = JSON.parse(notes)
+        parsedNotes.push(newNote)
+        return JSON.stringify(parsedNotes, null, 2);
+      })
+      .then((updatedNote) => {
+        return fs.writeFile("./db/db.json", updatedNote)
+      })
+      .then( err => {
+        if (!err) {
+          console.log("note added");
+        } else {
+          console.log("error adding note")
+        }
+      });
+    // Convert the data to a string so we can save it
+    const noteString = JSON.stringify(newNote, null);
+    fs.appendFile(`./db/db.json`, noteString).then((err) => {
+      err ? console.error(err) : console.log(`Successfully updated notes!`);
+    });
+
+    const response = {
+      status: 'success',
+      body: newNote,
+    };
+
+    console.log(response);
+    res.status(201).json(response);
+  } else {
+    res.status(500).json('Error in posting note');
+  }
 })
 
 
